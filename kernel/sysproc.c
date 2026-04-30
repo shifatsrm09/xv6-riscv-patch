@@ -107,3 +107,12 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//take arguments from user and set tickets
+uint64
+sys_settickets(void)
+{
+  int n;
+  argint(0, &n);   // no error check here
+  return settickets(n);
+}
