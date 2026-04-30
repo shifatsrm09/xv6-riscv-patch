@@ -79,6 +79,7 @@ void            printfinit(void);
 
 // proc.c
 int settickets(int);
+int rand(void);
 int             cpuid(void);
 void            kexit(int);
 int             kfork(void);
