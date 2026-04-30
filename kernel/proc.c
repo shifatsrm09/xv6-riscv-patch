@@ -274,7 +274,7 @@ kfork(void)
 
   // PATCH: inherit tickets from parent
   np->tickets = p->tickets;
-  
+
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
@@ -694,4 +694,17 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+//Task2: Patch - set tickets.
+int
+settickets(int n)
+{
+  if(n < 1)
+    return -1;
+
+  struct proc *p = myproc();
+  p->tickets = n;
+  return 0;
 }
