@@ -428,6 +428,7 @@ kwait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+
 void
 scheduler(void)
 {
@@ -436,35 +437,55 @@ scheduler(void)
 
   c->proc = 0;
   for(;;){
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting. Then turn them back off
-    // to avoid a possible race between an interrupt
-    // and wfi.
     intr_on();
     intr_off();
 
-    int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+    int total_tickets = 0;
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        found = 1;
+    // Step 1: Calculate total tickets of RUNNABLE processes
+    for(p = proc; p < &proc[NPROC]; p++){
+      acquire(&p->lock);
+      if(p->state == RUNNABLE){
+        total_tickets += p->tickets;
       }
       release(&p->lock);
     }
-    if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
+
+    if(total_tickets == 0){
       asm volatile("wfi");
+      continue;
+    }
+
+    // Step 2: Pick a winning ticket
+    int winner = rand() % total_tickets;
+
+    int current = 0;
+
+    // Step 3: Find the process with the winning ticket
+    for(p = proc; p < &proc[NPROC]; p++){
+      acquire(&p->lock);
+
+      if(p->state == RUNNABLE){
+        current += p->tickets;
+
+        if(current > winner){
+          // Step 4: Run the selected process
+          p->state = RUNNING;
+          c->proc = p;
+
+          swtch(&c->context, &p->context);
+
+          c->proc = 0;
+
+          // Step 5: Increase rounds
+          p->rounds++;
+
+          release(&p->lock);
+          break;
+        }
+      }
+
+      release(&p->lock);
     }
   }
 }
