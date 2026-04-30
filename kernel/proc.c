@@ -272,6 +272,9 @@ kfork(void)
     return -1;
   }
 
+  // PATCH: inherit tickets from parent
+  np->tickets = p->tickets;
+  
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
